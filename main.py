@@ -1,14 +1,11 @@
 import telebot
+from config import keys, TOKEN
+from utils import ConvertionException, Converter
 
-TOKEN = '6173669360:AAFKquWKqVAydOF2jjix4o3R2Vq3UPA8cd4'
 
 bot = telebot.TeleBot(TOKEN)
 
-keys = {
-    'евро' : 'EUR',
-    'доллар' : 'USD',
-    'рубли' : 'RYB'
-}
+
 @bot.message_handler(commands=['start', 'help'])
 def help(message):
     text = 'Чтобы начать работу введите команду боту в следующем формате: \n<имя валюты> ' \
@@ -23,6 +20,26 @@ def values(message: telebot.types.Message):
     for key in keys.keys():
         text = '\n'.join((text, key,))
     bot.reply_to(message, text)
+
+@bot.message_handler(content_types=['text',])
+def convert(message: telebot.types.Message):
+    try:
+        data_values = message.text.split(' ')
+
+        if len(data_values) != 3:
+            raise ConvertionException('Слишком мало/много параметров')
+
+        quote, base, amount = data_values
+        total_base = Converter.convert(quote, base, amount)
+    except ConvertionException as e:
+        bot.reply_to(message, f'Ошибка пользователя. \n{e}')
+
+    except Exception as e:
+        bot.reply_to(message, f'Не удалось обработать команду \n{e}')
+    else:
+        text = f'Цена {amount} {quote} в {base} - {total_base}'
+        bot.send_message(message.chat.id, text)
+
 
 
 bot.polling()
